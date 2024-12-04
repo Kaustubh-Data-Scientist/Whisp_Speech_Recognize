@@ -1,0 +1,6 @@
+Flask
+torch
+transformers
+soundfile  # For processing audio files
+librosa
+-e .
