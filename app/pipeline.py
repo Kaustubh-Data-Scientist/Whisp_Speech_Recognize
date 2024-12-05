@@ -1,51 +1,27 @@
-# import torch
-# from transformers import AutoModelForCasualLM, AutoTokenizer
-
-# model_name = "mediaProcessing/Transcriber-Medium"
-# tokenizer = AutoTokenizer.from_pretrained(model_name)
-# tokenizer.save_pretrained(f"models/tokenizer/{model_name}")
-
-# model = AutoModelForCasualLM.from_pretrained(model_name)
-# model.save_pretrained(f"models/model/{model_name}")
-
-# tokenizer = AutoTokenizer.from_pretrained(f"models/tokenizer/{model_name}")
-# model = AutoModelForCasualLM.from_pretrained(f"models/model/{model_name}")
-
-from transformers import AutoTokenizer, AutoModelForSpeechSeq2Seq
+import torch
+from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor
 import os
 
-# Define model and tokenizer paths
-# model_name = "mediaProcessing/Transcriber-small"
-# save_tokenizer = "models/tokenizer/"
-# save_model = "models/model/"
+def save_model_and_processor(model_id, save_directory):
+    """Saves the specified model and processor to the given directory."""
+    try:
+        model = AutoModelForSpeechSeq2Seq.from_pretrained(
+            model_id, torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32, 
+            low_cpu_mem_usage=True, use_safetensors=True
+        )
+        processor = AutoProcessor.from_pretrained(model_id)
+        
+        os.makedirs(save_directory, exist_ok=True)
+        model.save_pretrained(save_directory)
+        processor.save_pretrained(save_directory)
+        print(f"Model and processor saved to: {save_directory}")
+        return save_directory
+    except Exception as e:
+        print(f"An error occurred while saving the model: {e}")
+        return None
 
-# # Create directories if they do not exist
-# os.makedirs(save_tokenizer, exist_ok=True)
-# os.makedirs(save_model, exist_ok=True)
-
-# # Download and save tokenizer
-# print(f"Downloading tokenizer for {model_name}...")
-# tokenizer = AutoTokenizer.from_pretrained(model_name)
-# tokenizer.save_pretrained(save_tokenizer)
-# print(f"Tokenizer saved at {save_tokenizer}")
-
-# # Download and save model
-# print(f"Downloading model for {model_name}...")
-# model = AutoModelForSpeechSeq2Seq.from_pretrained(model_name)
-# model.save_pretrained(save_model)
-# print(f"Model saved at {save_model}")
-
-from transformers import AutoProcessor
-
-model_name = "mediaProcessing/Transcriber-small"  # Replace with your model name
-save_processor = "models/tokenizer/"
-
-# Create directory if not exists
-import os
-os.makedirs(save_processor, exist_ok=True)
-
-# Download and save the processor
-print(f"Downloading processor for {model_name}...")
-processor = AutoProcessor.from_pretrained(model_name)
-processor.save_pretrained(save_processor)
-print(f"Processor saved at {save_processor}")
+# Example usage
+if __name__ == "__main__":
+    model_id = "openai/whisper-large-v3-turbo"
+    save_directory = "models/whisper-large-v3-turbo"  # Desired save location
+    save_model_and_processor(model_id, save_directory)

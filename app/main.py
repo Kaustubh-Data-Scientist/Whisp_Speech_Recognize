@@ -1,70 +1,37 @@
-from flask import Flask, request, render_template, redirect, url_for
-from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
-import os
 import torch
-import librosa
+from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
-# Flask app setup
-app = Flask(__name__)
-
-# Paths to model and tokenizer
-MODEL_PATH = "models/model/"
-PROCESSOR_PATH = "models/tokenizer/"  # Use processor instead of tokenizer
-
-# Load the model and processor once during app initialization
-processor = AutoProcessor.from_pretrained(PROCESSOR_PATH)
-model = AutoModelForSpeechSeq2Seq.from_pretrained(MODEL_PATH)
-
-# Upload folder
-UPLOAD_FOLDER = './uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/transcribe', methods=['POST'])
-def transcribe():
-    # Ensure file is uploaded
-    if 'audio' not in request.files:
-        return redirect(url_for('index'))
-    
-    audio_file = request.files['audio']
-    
-    # Save file
-    if audio_file and audio_file.filename != '':
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], audio_file.filename)
-        audio_file.save(filepath)
-    else:
-        return redirect(url_for('index'))
-
+def load_model_and_processor(model_directory):
+    """Loads the model and processor from the specified directory."""
     try:
-        # Load and preprocess audio
-        audio, sr = librosa.load(filepath, sr=16000)
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
-        # Convert audio to tensor format expected by the processor
-        inputs = processor(audio, sampling_rate=sr, return_tensors="pt")
-
-        # Perform inference
-        with torch.no_grad():
-            logits = model(**inputs).logits
-
-        # Decode the output into text
-        predicted_ids = torch.argmax(logits, dim=-1)
-        transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
-
+        model = AutoModelForSpeechSeq2Seq.from_pretrained(model_directory, torch_dtype=torch_dtype)
+        model.to(device)
+        processor = AutoProcessor.from_pretrained(model_directory)
+        print("Model and processor loaded successfully!")
+        return model, processor
     except Exception as e:
-        # Log the error for debugging purposes
-        app.logger.error(f"An error occurred during transcription: {e}")
-        transcription = f"An error occurred: {str(e)}"  # Return the error message for debugging
+        print(f"An error occurred while loading the model: {e}")
+        return None, None
 
-    finally:
-        # Clean up uploaded file
-        if os.path.exists(filepath):
-            os.remove(filepath)
+# Example usage
+if __name__ == "__main__":
+    model_directory = "models/whisper-large-v3-turbo"  # Path to the saved model
+    model, processor = load_model_and_processor(model_directory)
 
-    return render_template('result.html', transcription=transcription)
+    if model and processor:
+        pipe = pipeline(
+            "automatic-speech-recognition",
+            model=model,
+            tokenizer=processor.tokenizer,
+            feature_extractor=processor.feature_extractor,
+            device=0 if torch.cuda.is_available() else -1,
+        )
 
-if __name__ == '__main__':
-    app.run(debug=True)
+        # Path to the audio file
+        audio_file = "resources_sample-calls.mp3"  # Change to your audio file location
+        result = pipe(audio_file, chunk_length_s=30, stride_length_s=5)
+        print("Transcription Result:")
+        print(result["text"])
