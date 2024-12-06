@@ -4,19 +4,67 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Transcription Result</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+        .entities {
+            display: flex;
+            justify-content: space-between;
+        }
+        .entities ul {
+            flex: 1;
+            margin: 0 10px;
+            list-style: none;
+            padding: 0;
+        }
+        .entities li {
+            margin-bottom: 10px;
+            background: #eaf4ff;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <h1>Transcription Result</h1>
-        <p>{{ transcription }}</p>
-        <h2>Upload Another Audio</h2>
-        <form action="/transcribe" method="POST" enctype="multipart/form-data">
-            <label for="audio">Upload Audio File:</label>
-            <input type="file" id="audio" name="audio" accept="audio/*" required>
-            <button type="submit">Transcribe</button>
+        <div class="transcription">
+            <h2>Extracted Text</h2>
+            <p>{{ transcription }}</p>
+        </div>
+        <div class="entities">
+            <div>
+                <h2>General Entities</h2>
+                <ul>
+                    {% for entity in entities if "LABEL" not in entity.label %}
+                        <li>{{ entity.text }} - <strong>{{ entity.label }}</strong></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div>
+                <h2>Medical Entities</h2>
+                <ul>
+                    {% for entity in entities if "LABEL" in entity.label %}
+                        <li>{{ entity.text }} - <strong>{{ entity.label }}</strong></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <form action="/" method="GET">
+            <button type="submit">Upload Another File</button>
         </form>
     </div>
-    <script src="/static/script.js"></script>
 </body>
 </html>
