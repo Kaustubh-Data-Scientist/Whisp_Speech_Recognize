@@ -31,7 +31,7 @@ if __name__ == "__main__":
         )
 
         # Path to the audio file
-        audio_file = "resources_sample-calls.mp3"  # Change to your audio file location
+        audio_file = r"C:\Users\Ajay\Desktop\Data Science\Project\Whisp_Speech_Recognize\app\resources_sample-calls.mp3"
         result = pipe(audio_file, chunk_length_s=30, stride_length_s=5)
         print("Transcription Result:")
         print(result["text"])
